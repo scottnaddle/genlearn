@@ -47,7 +47,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
-      url: ${{ steps.deploy.outputs.url }}
+      url: https://genlearn-eta.vercel.app
 
     steps:
       - name: Checkout code
@@ -71,8 +71,10 @@ jobs:
       - name: Deploy Project Artifacts to Vercel
         id: deploy
         run: |
-          DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
-          echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "Deploying..."
+          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} > /tmp/deploy_url.txt 2>&1
+          DEPLOY_URL=$(cat /tmp/deploy_url.txt | grep -E "^https://" | head -1)
+          echo "DEPLOY_URL=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
           echo "Deployed to: $DEPLOY_URL"
 
   # ============================================
@@ -86,7 +88,7 @@ jobs:
     steps:
       - name: Test API Health
         run: |
-          echo "Waiting for deployment..."
+          echo "Waiting for deployment propagation..."
           sleep 15
           DEPLOY_URL="${{ needs.deploy-vercel.outputs.DEPLOY_URL }}"
           echo "Testing: $DEPLOY_URL/api/health"
