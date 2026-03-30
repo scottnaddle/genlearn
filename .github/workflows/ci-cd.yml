@@ -68,15 +68,20 @@ jobs:
       - name: Build Project Artifacts
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Deploy Project Artifacts to Vercel
+      - name: Deploy to Vercel
         id: deploy
         run: |
-          echo "Deploying..."
-          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1 | tee /tmp/deploy_output.txt
-          # Extract URL from output - Vercel outputs "Production: https://..." line
-          DEPLOY_URL=$(grep -oE 'https://[a-zA-Z0-9-]+\.vercel\.app' /tmp/deploy_output.txt | head -1)
-          echo "DEPLOY_URL=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
-          echo "Final URL: $DEPLOY_URL"
+          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1 | tee /tmp/deploy.log
+
+      - name: Extract Deployment URL
+        run: |
+          echo "Extracting deployment URL..."
+          sleep 5
+          # Extract URL from deploy log - Vercel outputs "Production: https://..." and later "Aliased: https://..."
+          DEPLOY_URL=$(grep -oE 'https://[a-zA-Z0-9-]+\.vercel\.app' /tmp/deploy.log | sort -u | head -1)
+          echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "Extracted URL: $DEPLOY_URL"
+          echo "deploy_url=$DEPLOY_URL" >> $GITHUB_ENV
 
   # ============================================
   # Job 3: Smoke Tests (API)
@@ -85,20 +90,27 @@ jobs:
     name: Smoke Test - API
     runs-on: ubuntu-latest
     needs: deploy-vercel
+    environment:
+      name: production
+      url: https://genlearn-eta.vercel.app
     
     steps:
       - name: Test API Health
         run: |
           echo "Waiting for deployment propagation..."
-          sleep 15
+          sleep 20
           DEPLOY_URL="${{ needs.deploy-vercel.outputs.DEPLOY_URL }}"
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "DEPLOY_URL was empty, using fallback URL"
+            DEPLOY_URL="https://genlearn-eta.vercel.app"
+          fi
           echo "Testing: $DEPLOY_URL/api/health"
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOY_URL/api/health")
           echo "Health check status: $RESPONSE"
           if [ "$RESPONSE" = "200" ]; then
             echo "✅ /api/health OK"
           else
-            echo "❌ /api/health FAILED"
+            echo "❌ /api/health FAILED (HTTP $RESPONSE)"
             exit 1
           fi
 
@@ -114,9 +126,13 @@ jobs:
       - name: Test Content Generation
         run: |
           DEPLOY_URL="${{ needs.deploy-vercel.outputs.DEPLOY_URL }}"
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "DEPLOY_URL was empty, using fallback URL"
+            DEPLOY_URL="https://genlearn-eta.vercel.app"
+          fi
           
           # Test ML-01
-          echo "Testing ML-01 (Shorts Script)..."
+          echo "Testing ML-01 (Shorts Script) at $DEPLOY_URL..."
           RESPONSE=$(curl -s -X POST "$DEPLOY_URL/api/generate" \
             -H "Content-Type: application/json" \
             -d '{"contentTypeId":"ML-01","topic":"테스트 주제","purpose":"PoC 테스트용"}')
@@ -131,7 +147,7 @@ jobs:
           fi
           
           # Test ML-05
-          echo "Testing ML-05 (Glossary Snippet)..."
+          echo "Testing ML-05 (Glossary Snippet) at $DEPLOY_URL..."
           RESPONSE=$(curl -s -X POST "$DEPLOY_URL/api/generate" \
             -H "Content-Type: application/json" \
             -d '{"contentTypeId":"ML-05","topic":"머신러닝","purpose":"학습용"}')
