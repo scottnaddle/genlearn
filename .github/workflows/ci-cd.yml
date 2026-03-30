@@ -72,10 +72,11 @@ jobs:
         id: deploy
         run: |
           echo "Deploying..."
-          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} > /tmp/deploy_url.txt 2>&1
-          DEPLOY_URL=$(cat /tmp/deploy_url.txt | grep -E "^https://" | head -1)
+          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1 | tee /tmp/deploy_output.txt
+          # Extract URL from output - Vercel outputs "Production: https://..." line
+          DEPLOY_URL=$(grep -oE 'https://[a-zA-Z0-9-]+\.vercel\.app' /tmp/deploy_output.txt | head -1)
           echo "DEPLOY_URL=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
-          echo "Deployed to: $DEPLOY_URL"
+          echo "Final URL: $DEPLOY_URL"
 
   # ============================================
   # Job 3: Smoke Tests (API)
