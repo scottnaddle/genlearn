@@ -17,6 +17,8 @@
 
 import { ML01ShortsScript, ML01ShortsScriptSchema } from "./schemas/ml-01";
 import { ML05GlossarySnippet, ML05GlossarySnippetSchema } from "./schemas/ml-05";
+import { ML02EpisodeCard } from "./schemas/ml-02";
+import { VI01Infographic } from "./schemas/vi-01";
 
 // ============================================
 // Type Definitions
@@ -112,6 +114,112 @@ const mockML05Executor: SkillExecutor<ML05GlossarySnippet> = {
   },
 };
 
+/**
+ * Mock executor for ML-02 (Episode Card)
+ * Returns realistic sample output for demonstration
+ */
+const mockML02Executor: SkillExecutor<ML02EpisodeCard> = {
+  contentTypeId: "ML-02",
+  name: "1분 에피소드 카드",
+  description: "구조화된 학습 카드 - 제목 + 구조 3개 + 스크립트 3개",
+  execute: async (input: GenerateInput): Promise<GenerateOutput<ML02EpisodeCard>> => {
+    // Simulate processing delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Mock output based on input
+    const mockData: ML02EpisodeCard = {
+      episodeTitle: `${input.topic} 완전 정복`,
+      structure: ["도입", "본론", "마무리"],
+      scripts: [
+        {
+          title: "도입",
+          content: `${input.topic}에 대해 궁금하시나요? 지금부터 ${input.purpose}를 위한 핵심 내용을 알려드리겠습니다!`,
+          duration: "15~20초",
+        },
+        {
+          title: "본론",
+          content: `${input.topic}의 핵심: ${input.level || "초급"} 수준에서 알아야 할 3가지 포인트! 첫째, 기본 개념부터 시작해서...\n둘째, 실제 활용 사례를 통해...\n셋째, 학습 방법을 정리하면...`,
+          duration: "35~40초",
+        },
+        {
+          title: "마무리",
+          content: `오늘 배운 ${input.topic}, 간단히 정리하면 이렇습니다. 더 깊이 알고 싶으시면 관련 콘텐츠를 확인해주세요!`,
+          duration: "10~15초",
+        },
+      ],
+      duration: "약 1분",
+      format: "카드 형태",
+    };
+
+    return {
+      contentTypeId: "ML-02",
+      data: mockData,
+      generatedAt: new Date().toISOString(),
+    };
+  },
+};
+
+/**
+ * Mock executor for VI-01 (Infographic)
+ * Returns realistic sample output for demonstration
+ */
+const mockVI01Executor: SkillExecutor<VI01Infographic> = {
+  contentTypeId: "VI-01",
+  name: "인포그래픽",
+  description: "SVG 기반 정보 그래픽 - 시각적 데이터 표현",
+  execute: async (input: GenerateInput): Promise<GenerateOutput<VI01Infographic>> => {
+    // Simulate processing delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Mock output based on input
+    const mockData: VI01Infographic = {
+      title: `${input.topic} 정보 그래픽`,
+      sections: [
+        {
+          title: "핵심 개념",
+          content: `${input.topic}은 ${input.purpose}에 핵심적인 역할을 합니다. 주요 특성과 활용 방법을 시각적으로 정리한 인포그래픽입니다.`,
+          chartType: "none",
+        },
+        {
+          title: "분포 현황",
+          content: "주요 요소별 분포 비율",
+          chartType: "pie",
+          chartData: [
+            { label: "기본 개념", value: 40, color: "#8B5CF6" },
+            { label: "실무 적용", value: 35, color: "#06B6D4" },
+            { label: "심화 학습", value: 25, color: "#F59E0B" },
+          ],
+        },
+        {
+          title: "학습 로드맵",
+          content: "단계별 학습 프로세스",
+          chartType: "bar",
+          chartData: [
+            { label: "1단계", value: 100, color: "#8B5CF6" },
+            { label: "2단계", value: 75, color: "#06B6D4" },
+            { label: "3단계", value: 50, color: "#10B981" },
+            { label: "4단계", value: 25, color: "#F59E0B" },
+          ],
+        },
+      ],
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+        <rect width="400" height="300" fill="#F8FAFC"/>
+        <text x="200" y="30" font-size="16" font-weight="bold" text-anchor="middle" fill="#1E293B">${input.topic}</text>
+        <circle cx="200" cy="150" r="80" fill="none" stroke="#8B5CF6" stroke-width="20" stroke-dasharray="201 502"/>
+        <text x="200" y="155" font-size="12" text-anchor="middle" fill="#1E293B">40%</text>
+      </svg>`,
+      source: `GenLearn AI 생성 (${input.level || "초급"} 수준)`,
+      chartType: "mixed",
+    };
+
+    return {
+      contentTypeId: "VI-01",
+      data: mockData,
+      generatedAt: new Date().toISOString(),
+    };
+  },
+};
+
 // ============================================
 // Content Type Registry
 // ============================================
@@ -119,6 +227,8 @@ const mockML05Executor: SkillExecutor<ML05GlossarySnippet> = {
 const CONTENT_TYPE_REGISTRY: Record<string, SkillExecutor> = {
   "ML-01": mockML01Executor,
   "ML-05": mockML05Executor,
+  "ML-02": mockML02Executor,
+  "VI-01": mockVI01Executor,
 };
 
 // ============================================

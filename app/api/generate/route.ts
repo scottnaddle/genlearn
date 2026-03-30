@@ -7,12 +7,12 @@ import { validate } from "@/lib/validator";
 // Request Schema
 // ============================================
 
-const CONTENT_TYPE_IDS = ["ML-01", "ML-05"] as const;
+const CONTENT_TYPE_IDS = ["ML-01", "ML-02", "ML-05", "VI-01"] as const;
 type ContentTypeId = (typeof CONTENT_TYPE_IDS)[number];
 
 const GenerateRequestSchema = z.object({
   contentTypeId: z.enum(CONTENT_TYPE_IDS, {
-    message: `contentTypeId는 'ML-01' 또는 'ML-05'이어야 합니다.`,
+    message: `contentTypeId는 'ML-01', 'ML-02', 'ML-05' 또는 'VI-01'이어야 합니다.`,
   }),
   topic: z
     .string()

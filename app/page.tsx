@@ -6,7 +6,7 @@ import { useState } from "react";
 // Types
 // ============================================
 
-type ContentTypeId = "ML-01" | "ML-05";
+type ContentTypeId = "ML-01" | "ML-02" | "ML-05" | "VI-01";
 type Level = "beginner" | "intermediate" | "advanced";
 type Tab = "formatted" | "json" | "validation";
 
@@ -41,11 +41,25 @@ const CONTENT_TYPES = [
     details: ["훅 → 핵심 포인트 3개 → CTA 구조", "TikTok · Instagram Reels · YouTube Shorts"],
   },
   {
+    id: "ML-02" as ContentTypeId,
+    name: "1분 에피소드 카드",
+    description: "구조화된 학습 카드",
+    icon: "📇",
+    details: ["제목 + 구조 3개", "스크립트 3개"],
+  },
+  {
     id: "ML-05" as ContentTypeId,
     name: "용어 스니펫",
     description: "전문 용어 정의 + 유사어/반의어 + 예문",
     icon: "📝",
     details: ["용어 정의 + 유사어/반의어", "실사용 예문 1~2문장"],
+  },
+  {
+    id: "VI-01" as ContentTypeId,
+    name: "인포그래픽",
+    description: "SVG 기반 정보 그래픽",
+    icon: "📊",
+    details: ["시각적 데이터", "차트 포함"],
   },
 ];
 
@@ -177,6 +191,111 @@ function GlossarySnippetView({ data }: { data: Record<string, unknown> }) {
   );
 }
 
+function ML02EpisodeCardView({ data }: { data: Record<string, unknown> }) {
+  return (
+    <div className="space-y-4">
+      {/* Episode Title */}
+      <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl p-4">
+        <div className="text-xs font-medium opacity-80 mb-1">📇 EPISODE CARD</div>
+        <div className="text-xl font-bold">{data.episodeTitle as string}</div>
+        <div className="flex gap-4 mt-2 text-sm opacity-90">
+          <span>⏱️ {data.duration as string}</span>
+          <span>📋 {data.format as string}</span>
+        </div>
+      </div>
+
+      {/* Structure + Scripts */}
+      <div className="space-y-3">
+        {(data.structure as string[] | undefined)?.map((struct, i) => {
+          const script = (data.scripts as Array<Record<string, unknown>> | undefined)?.[i];
+          return (
+            <div key={i} className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="flex-shrink-0 w-6 h-6 bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-300 rounded-full flex items-center justify-center text-sm font-medium">
+                  {i + 1}
+                </span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{struct}</span>
+                {script && (
+                  <span className="text-xs text-slate-500 ml-auto">⏱️ {script.duration as string}</span>
+                )}
+              </div>
+              {script && (
+                <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed pl-8">
+                  {script.content as string}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function VI01InfographicView({ data }: { data: Record<string, unknown> }) {
+  const title = data.title as string;
+  const source = data.source as string | undefined;
+  const sections = data.sections as Array<Record<string, unknown>> | undefined;
+  const svgData = data.svgData as string | undefined;
+
+  const renderedSections: React.ReactNode = sections
+    ? sections.map((section, i) => {
+        const sectionTitle = String(section.title ?? "");
+        const sectionContent = String(section.content ?? "");
+        const chartType = String(section.chartType ?? "none");
+        const chartData = (section.chartData as Array<{label: string; value: number; color?: string}> | undefined) ?? undefined;
+
+        return (
+          <div key={i} className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-5 h-5 bg-cyan-100 dark:bg-cyan-900 text-cyan-600 dark:text-cyan-300 rounded flex items-center justify-center text-xs font-medium">
+                {i + 1}
+              </span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">
+                {sectionTitle}
+              </span>
+              <span className="text-xs text-slate-400 ml-auto uppercase">{chartType}</span>
+            </div>
+            <p className="text-slate-600 dark:text-slate-400 text-sm mb-3">{sectionContent}</p>
+            {chartType !== "none" && chartData && (
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                <div className="text-xs text-slate-500 mb-2">차트 데이터</div>
+                <div className="space-y-1">
+                  {chartData.map((item, j) => (
+                    <div key={j} className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded" style={{ backgroundColor: item.color || "#8B5CF6" }} />
+                      <span className="text-xs text-slate-600 dark:text-slate-400">{item.label}</span>
+                      <span className="text-xs font-medium text-slate-800 dark:text-slate-200 ml-auto">{item.value}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })
+    : null;
+
+  return (
+    <>
+      <div className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl p-4">
+        <div className="text-xs font-medium opacity-80 mb-1">📊 INFOGRAPHIC</div>
+        <div className="text-xl font-bold">{title}</div>
+        {source && <div className="text-xs opacity-70 mt-1">출처: {source}</div>}
+      </div>
+      <div className="space-y-4">{renderedSections}</div>
+      {svgData && (
+        <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4">
+          <div className="text-xs font-medium text-slate-500 mb-3">SVG 미리보기</div>
+          <div className="bg-white rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+            <div dangerouslySetInnerHTML={{ __html: svgData }} />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // ============================================
 // Main Page
 // ============================================
@@ -245,7 +364,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2">
             <span className="px-2 py-1 bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-300 text-xs font-medium rounded-md">
-              ML-01 & ML-05
+              ML-01 · ML-02 · ML-05 · VI-01
             </span>
           </div>
         </div>
@@ -430,9 +549,13 @@ export default function Home() {
                       <div className="animate-in fade-in duration-200">
                         {contentType === "ML-01" ? (
                           <ShortsScriptView data={response.output} />
-                        ) : (
+                        ) : contentType === "ML-05" ? (
                           <GlossarySnippetView data={response.output} />
-                        )}
+                        ) : contentType === "ML-02" ? (
+                          <ML02EpisodeCardView data={response.output} />
+                        ) : contentType === "VI-01" ? (
+                          <VI01InfographicView data={response.output} />
+                        ) : null}
                       </div>
                     )}
 
@@ -516,7 +639,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-slate-200 dark:border-slate-800 mt-12 py-6">
         <div className="max-w-5xl mx-auto px-4 text-center text-sm text-slate-500">
-          GenLearn PoC · ML-01 & ML-05 Demo · 스키마 검증 포함
+          GenLearn PoC · ML-01 & ML-02 & ML-05 & VI-01 Demo · 스키마 검증 포함
         </div>
       </footer>
     </div>

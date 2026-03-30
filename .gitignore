@@ -37,3 +37,6 @@ next-env.d.ts
 
 # test
 /coverage
+
+# sqlite
+genlearn.db
