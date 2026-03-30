@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
 jobs:
   # ============================================
   # Job 1: Build & Test
@@ -31,21 +27,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run ESLint
-        run: npm run lint 2>&1 || true
-
       - name: Build project
         run: npm run build
-        env:
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
-
-      - name: Run Playwright tests
-        if: github.event_name == 'pull_request'
-        run: |
-          npm install -D @playwright/test
-          npx playwright install --with-deps chromium
-          npx playwright test || true
-        continue-on-error: true
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -80,29 +63,29 @@ jobs:
         run: npm install -g vercel
 
       - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=production
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
       - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel build --prod
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy Project Artifacts to Vercel
         id: deploy
         run: |
-          DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          DEPLOY_URL=$(vercel deploy --prebuilt --prod)
           echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_OUTPUT
           echo "Deployed to: $DEPLOY_URL"
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Output Deployment URL
-        run: echo "🎉 Deployed successfully to: ${{ steps.deploy.outputs.DEPLOY_URL }}"
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
   # ============================================
   # Job 3: Smoke Tests (API)
@@ -111,17 +94,15 @@ jobs:
     name: Smoke Test - API
     runs-on: ubuntu-latest
     needs: deploy-vercel
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
       - name: Test API Health
         run: |
           echo "Waiting for deployment..."
           sleep 10
-          
-          # Test /api/health
-          echo "Testing /api/health..."
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://${{ needs.deploy-vercel.outputs.DEPLOY_URL }}/api/health)
+          DEPLOY_URL="${{ needs.deploy-vercel.outputs.DEPLOY_URL }}"
+          echo "Testing: $DEPLOY_URL/api/health"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOY_URL/api/health")
           echo "Health check status: $RESPONSE"
           if [ "$RESPONSE" = "200" ]; then
             echo "✅ /api/health OK"
@@ -137,24 +118,22 @@ jobs:
     name: Smoke Test - Content Generation
     runs-on: ubuntu-latest
     needs: deploy-vercel
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
       - name: Test Content Generation
         run: |
-          echo "Testing content generation..."
+          DEPLOY_URL="${{ needs.deploy-vercel.outputs.DEPLOY_URL }}"
           
           # Test ML-01
           echo "Testing ML-01 (Shorts Script)..."
-          RESPONSE=$(curl -s -X POST https://${{ needs.deploy-vercel.outputs.DEPLOY_URL }}/api/generate \
+          RESPONSE=$(curl -s -X POST "$DEPLOY_URL/api/generate" \
             -H "Content-Type: application/json" \
             -d '{"contentTypeId":"ML-01","topic":"테스트 주제","purpose":"PoC 테스트용"}')
           
           echo "ML-01 Response: $RESPONSE"
           
           # Check validation
-          VALID=$(echo $RESPONSE | grep -o '"valid":true' || echo '"valid":false')
-          if [ "$VALID" = '"valid":true' ]; then
+          if echo "$RESPONSE" | grep -q '"valid":true'; then
             echo "✅ ML-01 validation passed"
           else
             echo "❌ ML-01 validation failed"
@@ -163,12 +142,11 @@ jobs:
           
           # Test ML-05
           echo "Testing ML-05 (Glossary Snippet)..."
-          RESPONSE=$(curl -s -X POST https://${{ needs.deploy-vercel.outputs.DEPLOY_URL }}/api/generate \
+          RESPONSE=$(curl -s -X POST "$DEPLOY_URL/api/generate" \
             -H "Content-Type: application/json" \
             -d '{"contentTypeId":"ML-05","topic":"머신러닝","purpose":"학습용"}')
           
-          VALID=$(echo $RESPONSE | grep -o '"valid":true' || echo '"valid":false')
-          if [ "$VALID" = '"valid":true' ]; then
+          if echo "$RESPONSE" | grep -q '"valid":true'; then
             echo "✅ ML-05 validation passed"
           else
             echo "❌ ML-05 validation failed"
@@ -191,7 +169,7 @@ jobs:
           echo "🎉 GenLearn CI/CD Pipeline Complete"
           echo "==================================="
           echo ""
-          echo "📦 Deployment URL: https://${{ needs.deploy-vercel.outputs.DEPLOY_URL }}"
+          echo "📦 Deployment URL: ${{ needs.deploy-vercel.outputs.DEPLOY_URL }}"
           echo "🔗 GitHub Commit: ${{ github.sha }}"
           echo "👤 Author: ${{ github.actor }}"
           echo ""
