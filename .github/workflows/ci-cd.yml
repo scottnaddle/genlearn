@@ -63,29 +63,17 @@ jobs:
         run: npm install -g vercel
 
       - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=production
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build Project Artifacts
-        run: vercel build --prod
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy Project Artifacts to Vercel
         id: deploy
         run: |
-          DEPLOY_URL=$(vercel deploy --prebuilt --prod)
+          DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
           echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_OUTPUT
           echo "Deployed to: $DEPLOY_URL"
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
   # ============================================
   # Job 3: Smoke Tests (API)
@@ -99,7 +87,7 @@ jobs:
       - name: Test API Health
         run: |
           echo "Waiting for deployment..."
-          sleep 10
+          sleep 15
           DEPLOY_URL="${{ needs.deploy-vercel.outputs.DEPLOY_URL }}"
           echo "Testing: $DEPLOY_URL/api/health"
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOY_URL/api/health")
@@ -132,7 +120,6 @@ jobs:
           
           echo "ML-01 Response: $RESPONSE"
           
-          # Check validation
           if echo "$RESPONSE" | grep -q '"valid":true'; then
             echo "✅ ML-01 validation passed"
           else
